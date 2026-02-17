@@ -1,0 +1,12 @@
+[package]
+name = "server-common"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+pmcp = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }

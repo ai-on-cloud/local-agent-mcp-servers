@@ -1,0 +1,17 @@
+[package]
+name = "browser-server"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "browser-server"
+path = "src/main.rs"
+
+[dependencies]
+mcp-browser-core = { path = "../mcp-browser-core" }
+server-common = { path = "../server-common" }
+tokio = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
