@@ -46,7 +46,7 @@ pub async fn run_http(server: Server, args: &CliArgs) -> anyhow::Result<()> {
     let http_server = StreamableHttpServer::with_config(addr, server, config);
     let (_bound_addr, server_handle) = http_server.start().await?;
 
-    tracing::info!("MCP server listening on http://{}:{}/mcp", args.host, args.port);
+    tracing::info!("MCP server listening on http://{}:{}/", args.host, args.port);
 
     server_handle.await?;
 

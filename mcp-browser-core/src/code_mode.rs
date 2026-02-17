@@ -320,6 +320,7 @@ pub fn validate_script(code: &str) -> Result<ValidationResult, String> {
     Ok(ValidationResult {
         is_valid: true,
         approval_token: token,
+        normalized_code: code.to_string(),
         api_call_count: plan.metadata.api_call_count,
         has_mutations: plan.metadata.has_mutations,
         endpoints: plan.metadata.endpoints,
@@ -388,6 +389,9 @@ pub async fn execute_script(
 pub struct ValidationResult {
     pub is_valid: bool,
     pub approval_token: String,
+    /// The normalized (trimmed) code that the token was computed from.
+    /// Pass this exact string to `execute_code` to avoid code-mismatch errors.
+    pub normalized_code: String,
     pub api_call_count: usize,
     pub has_mutations: bool,
     pub endpoints: Vec<String>,

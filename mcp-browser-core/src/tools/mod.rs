@@ -284,9 +284,10 @@ fn register_code_mode_tools(
             },
         )
         .with_description(
-            "Validates a browser automation script and returns an approval token. \
+            "Validates a browser automation script and returns an approval_token plus normalized_code. \
              The script uses a safe JavaScript subset with api.post/get calls for browser operations. \
-             You MUST call this before execute_code.",
+             You MUST call this before execute_code. When calling execute_code, pass the returned \
+             normalized_code verbatim as the code parameter — do NOT modify it.",
         ),
     );
 
@@ -317,9 +318,9 @@ fn register_code_mode_tools(
             },
         )
         .with_description(
-            "Executes a validated browser automation script. The approval token must be obtained \
-             from validate_code and the code must match exactly. Scripts can navigate, click, fill forms, \
-             take screenshots, and more using api.post/get calls.",
+            "Executes a validated browser automation script. You MUST pass the exact `normalized_code` \
+             string returned by validate_code as the `code` parameter, along with the `approval_token`. \
+             Do NOT modify the code in any way — use the normalized_code verbatim.",
         ),
     );
 
