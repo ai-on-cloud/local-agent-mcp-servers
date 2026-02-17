@@ -14,6 +14,9 @@ run port="3100" profile="":
     cargo run -p browser-server -- serve --port {{port}} --headless \
         {{ if profile != "" { "--profile " + profile } else { "" } }}
 
+integration-test:
+    cargo test -p mcp-browser-core --test code_mode_browser -- --ignored --test-threads=1
+
 # Open browser for manual login, then save profile
 setup-login profile url:
     cargo run -p browser-server -- setup-login --profile {{profile}} --url {{url}}

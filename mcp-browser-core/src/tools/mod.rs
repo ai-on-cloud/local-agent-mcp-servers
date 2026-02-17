@@ -17,6 +17,7 @@ pub mod wait;
 use crate::browser::BrowserManager;
 use pmcp::TypedTool;
 use std::sync::Arc;
+use validator::Validate;
 
 /// Register all browser tools onto the server builder.
 ///
@@ -188,7 +189,7 @@ pub fn register_tools(
         .with_description("Get the text content of an element identified by a CSS selector."),
     );
 
-    let m = manager;
+    let m = manager.clone();
     let builder = builder.tool(
         "evaluate_script",
         TypedTool::new(
@@ -200,6 +201,125 @@ pub fn register_tools(
         )
         .with_description(
             "Execute JavaScript in the browser page context. Returns the result of the expression.",
+        ),
+    );
+
+    // --- Code mode tools ---
+    register_code_mode_tools(builder, manager)
+}
+
+/// Input for validate_code tool.
+#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, validator::Validate)]
+#[schemars(deny_unknown_fields)]
+pub struct ValidateCodeInput {
+    /// The browser automation script to validate (JavaScript subset)
+    #[validate(length(min = 1))]
+    #[schemars(description = "The browser automation script to validate. Uses a safe JavaScript subset with api.post/get calls for browser operations.")]
+    pub code: String,
+
+    /// If true, validate without generating an approval token
+    #[serde(default)]
+    #[schemars(description = "If true, validate without generating approval token")]
+    pub dry_run: Option<bool>,
+
+    /// Optional variables to bind in the script scope
+    #[serde(default)]
+    #[schemars(description = "Optional variables to bind in the script scope")]
+    pub variables: Option<serde_json::Value>,
+}
+
+/// Input for execute_code tool.
+#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, validator::Validate)]
+#[schemars(deny_unknown_fields)]
+pub struct ExecuteCodeInput {
+    /// The browser automation script to execute (must match validated code)
+    #[validate(length(min = 1))]
+    #[schemars(description = "The browser automation script to execute (must match validated code)")]
+    pub code: String,
+
+    /// The approval token from validate_code
+    #[validate(length(min = 1))]
+    #[schemars(description = "The approval token from validate_code")]
+    pub approval_token: String,
+
+    /// Optional variables to bind in the script scope
+    #[serde(default)]
+    #[schemars(description = "Optional variables to bind in the script scope")]
+    pub variables: Option<serde_json::Value>,
+}
+
+/// Register validate_code and execute_code tools for script-based automation.
+fn register_code_mode_tools(
+    builder: pmcp::ServerBuilder,
+    manager: Arc<BrowserManager>,
+) -> pmcp::ServerBuilder {
+    use crate::code_mode;
+
+    let m = manager.clone();
+    let builder = builder.tool(
+        "validate_code",
+        TypedTool::new(
+            "validate_code",
+            move |input: ValidateCodeInput, _extra| {
+                let _m = m.clone();
+                Box::pin(async move {
+                    input
+                        .validate()
+                        .map_err(|e| pmcp::Error::validation(format!("Validation failed: {}", e)))?;
+
+                    match code_mode::validate_script(&input.code) {
+                        Ok(mut result) => {
+                            if input.dry_run.unwrap_or(false) {
+                                result.approval_token = String::new();
+                            }
+                            serde_json::to_value(&result)
+                                .map_err(|e| pmcp::Error::internal(e.to_string()))
+                        }
+                        Err(e) => Ok(serde_json::json!({
+                            "is_valid": false,
+                            "error": e,
+                        })),
+                    }
+                })
+            },
+        )
+        .with_description(
+            "Validates a browser automation script and returns an approval token. \
+             The script uses a safe JavaScript subset with api.post/get calls for browser operations. \
+             You MUST call this before execute_code.",
+        ),
+    );
+
+    let m = manager;
+    let builder = builder.tool(
+        "execute_code",
+        TypedTool::new(
+            "execute_code",
+            move |input: ExecuteCodeInput, _extra| {
+                let m = m.clone();
+                Box::pin(async move {
+                    input
+                        .validate()
+                        .map_err(|e| pmcp::Error::validation(format!("Validation failed: {}", e)))?;
+
+                    match code_mode::execute_script(
+                        m,
+                        &input.code,
+                        &input.approval_token,
+                        input.variables,
+                    )
+                    .await
+                    {
+                        Ok(result) => Ok(result),
+                        Err(e) => Err(pmcp::Error::internal(e)),
+                    }
+                })
+            },
+        )
+        .with_description(
+            "Executes a validated browser automation script. The approval token must be obtained \
+             from validate_code and the code must match exactly. Scripts can navigate, click, fill forms, \
+             take screenshots, and more using api.post/get calls.",
         ),
     );
 

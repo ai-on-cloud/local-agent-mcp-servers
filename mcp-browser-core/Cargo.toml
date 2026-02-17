@@ -12,12 +12,14 @@ serde_json = { workspace = true }
 schemars = { workspace = true }
 validator = { workspace = true }
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 base64 = { workspace = true }
 chrono = { workspace = true }
 directories = { workspace = true }
 futures = { workspace = true }
+mcp-server-common = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
