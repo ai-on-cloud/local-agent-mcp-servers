@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<!--
+  WiX installer for browser-server MCP server.
+  Build with: cargo wix --no-build --nocapture -p browser-server
+-->
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+
+    <Product
+        Id='*'
+        Name='browser-server'
+        UpgradeCode='F9A3C4B2-5D6E-7F8A-9B0C-1D2E3F4A5B6C'
+        Manufacturer='theonlyhennygod'
+        Language='1033'
+        Codepage='1252'
+        Version='$(var.Version)'>
+
+        <Package Id='*'
+            Keywords='Installer'
+            Description='browser-server - MCP server for headless browser automation'
+            Manufacturer='theonlyhennygod'
+            InstallerVersion='450'
+            Languages='1033'
+            Compressed='yes'
+            InstallScope='perMachine'
+            SummaryCodepage='1252' />
+
+        <MajorUpgrade
+            Schedule='afterInstallInitialize'
+            DowngradeErrorMessage='A newer version of [ProductName] is already installed. Setup will now exit.' />
+
+        <Media Id='1' Cabinet='media1.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1' />
+        <Property Id='DiskPrompt' Value='browser-server Installation' />
+
+        <Directory Id='TARGETDIR' Name='SourceDir'>
+            <Directory Id='ProgramFiles64Folder' Name='PFiles'>
+                <Directory Id='APPLICATIONFOLDER' Name='browser-server'>
+                    <Component Id='binary0' Guid='*' Win64='yes'>
+                        <File
+                            Id='exe0'
+                            Name='browser-server.exe'
+                            DiskId='1'
+                            Source='$(var.CargoTargetBinDir)\browser-server.exe'
+                            KeyPath='yes' />
+                    </Component>
+                </Directory>
+            </Directory>
+
+            <!-- Add to system PATH -->
+            <Component Id='Path' Guid='B2C3D4E5-F6A7-890B-CDEF-1234567890AB' Win64='yes' KeyPath='yes'>
+                <Environment
+                    Id='PATH'
+                    Name='PATH'
+                    Value='[APPLICATIONFOLDER]'
+                    Permanent='no'
+                    Part='last'
+                    Action='set'
+                    System='yes' />
+            </Component>
+        </Directory>
+
+        <Feature
+            Id='Binaries'
+            Title='Application'
+            Description='Installs the browser-server binary.'
+            Level='1'
+            ConfigurableDirectory='APPLICATIONFOLDER'
+            AllowAdvertise='no'
+            Display='expand'
+            Absent='disallow'>
+
+            <ComponentRef Id='binary0' />
+
+            <Feature
+                Id='Environment'
+                Title='PATH Environment Variable'
+                Description='Add browser-server to the system PATH so it can be run from any command prompt.'
+                Level='1'
+                Absent='allow'>
+                <ComponentRef Id='Path' />
+            </Feature>
+        </Feature>
+
+        <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize' />
+
+        <UI>
+            <UIRef Id='WixUI_FeatureTree' />
+            <Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>
+            <Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>
+        </UI>
+
+    </Product>
+
+</Wix>

@@ -20,3 +20,6 @@ integration-test:
 # Open browser for manual login, then save profile
 setup-login profile url:
     cargo run -p browser-server -- setup-login --profile {{profile}} --url {{url}}
+
+install:
+    cargo install --path browser-server

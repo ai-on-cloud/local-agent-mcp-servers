@@ -2,6 +2,11 @@
 name = "browser-server"
 version.workspace = true
 edition.workspace = true
+license = "MIT"
+description = "MCP server for headless browser automation via Chrome DevTools Protocol"
+repository = "https://github.com/theonlyhennygod/mcp-servers"
+keywords = ["mcp", "browser", "automation", "chrome", "headless"]
+categories = ["command-line-utilities", "web-programming"]
 
 [[bin]]
 name = "browser-server"
