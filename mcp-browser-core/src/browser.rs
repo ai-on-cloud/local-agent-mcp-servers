@@ -1,7 +1,8 @@
-//! BrowserManager — CDP browser lifecycle with profile support.
+//! BrowserManager — CDP browser lifecycle with multi-page and profile support.
 //!
 //! Central browser lifecycle manager. Profile-aware: launches Chrome with
 //! `--user-data-dir` pointing to the saved profile so cookies/sessions persist.
+//! Supports multiple pages (tabs) with an active page index.
 
 use crate::profile::ProfileManager;
 use anyhow::{Context, Result};
@@ -38,14 +39,29 @@ impl Default for BrowserManagerConfig {
     }
 }
 
+/// Info about an open page, returned by `list_pages_info`.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PageInfo {
+    pub index: usize,
+    pub url: String,
+    pub active: bool,
+}
+
+/// Tracks all open pages and which one is active.
+#[derive(Default)]
+struct PageState {
+    pages: Vec<Page>,
+    active_idx: usize,
+}
+
 /// Central browser lifecycle manager.
 ///
-/// Holds a single browser instance and page. Profile-aware: when a profile is
+/// Supports multiple pages (tabs). Profile-aware: when a profile is
 /// specified, Chrome launches with `--user-data-dir` so cookies, localStorage,
 /// and saved passwords persist across sessions.
 pub struct BrowserManager {
     browser: RwLock<Option<Browser>>,
-    page: RwLock<Option<Page>>,
+    state: RwLock<PageState>,
     config: BrowserManagerConfig,
     profile_manager: Arc<ProfileManager>,
 }
@@ -54,7 +70,7 @@ impl BrowserManager {
     pub fn new(config: BrowserManagerConfig, profile_manager: Arc<ProfileManager>) -> Self {
         Self {
             browser: RwLock::new(None),
-            page: RwLock::new(None),
+            state: RwLock::new(PageState::default()),
             config,
             profile_manager,
         }
@@ -137,22 +153,24 @@ impl BrowserManager {
         Ok(())
     }
 
-    /// Get or create the active page.
+    /// Get the active page, creating one if none exist.
     pub async fn page(&self) -> Result<Page> {
         self.ensure_browser().await?;
 
-        // Fast path: page already exists
+        // Fast path: pages exist
         {
-            let guard = self.page.read().await;
-            if let Some(ref page) = *guard {
-                return Ok(page.clone());
+            let state = self.state.read().await;
+            if !state.pages.is_empty() {
+                let idx = state.active_idx.min(state.pages.len() - 1);
+                return Ok(state.pages[idx].clone());
             }
         }
 
-        let mut page_guard = self.page.write().await;
-        // Double-check
-        if let Some(ref page) = *page_guard {
-            return Ok(page.clone());
+        // Slow path: create initial page
+        let mut state = self.state.write().await;
+        if !state.pages.is_empty() {
+            let idx = state.active_idx.min(state.pages.len() - 1);
+            return Ok(state.pages[idx].clone());
         }
 
         let browser_guard = self.browser.read().await;
@@ -165,8 +183,94 @@ impl BrowserManager {
             .await
             .context("Failed to create new page")?;
 
-        *page_guard = Some(page.clone());
+        state.pages.push(page.clone());
+        state.active_idx = 0;
         Ok(page)
+    }
+
+    /// Create a new page (tab) and make it active. Returns the page index.
+    pub async fn create_new_page(&self, url: &str) -> Result<(usize, Page)> {
+        self.ensure_browser().await?;
+
+        let browser_guard = self.browser.read().await;
+        let browser = browser_guard
+            .as_ref()
+            .context("Browser not initialized")?;
+
+        let page = browser
+            .new_page(url)
+            .await
+            .with_context(|| format!("Failed to create page for {}", url))?;
+
+        let mut state = self.state.write().await;
+        let idx = state.pages.len();
+        state.pages.push(page.clone());
+        state.active_idx = idx;
+        Ok((idx, page))
+    }
+
+    /// List info about all open pages.
+    pub async fn list_pages_info(&self) -> Result<Vec<PageInfo>> {
+        self.ensure_browser().await?;
+
+        let state = self.state.read().await;
+        let mut infos = Vec::with_capacity(state.pages.len());
+
+        for (i, page) in state.pages.iter().enumerate() {
+            let url = page
+                .url()
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_default()
+                .to_string();
+
+            infos.push(PageInfo {
+                index: i,
+                url,
+                active: i == state.active_idx,
+            });
+        }
+
+        Ok(infos)
+    }
+
+    /// Switch the active page by index.
+    pub async fn select_page(&self, idx: usize) -> Result<Page> {
+        let mut state = self.state.write().await;
+        if idx >= state.pages.len() {
+            anyhow::bail!(
+                "Page index {} out of range (have {} pages)",
+                idx,
+                state.pages.len()
+            );
+        }
+        state.active_idx = idx;
+        Ok(state.pages[idx].clone())
+    }
+
+    /// Close a page by index. Cannot close the last page.
+    pub async fn close_page(&self, idx: usize) -> Result<()> {
+        let mut state = self.state.write().await;
+        if idx >= state.pages.len() {
+            anyhow::bail!(
+                "Page index {} out of range (have {} pages)",
+                idx,
+                state.pages.len()
+            );
+        }
+        if state.pages.len() == 1 {
+            anyhow::bail!("Cannot close the last page");
+        }
+
+        state.pages.remove(idx);
+
+        // Adjust active index if needed
+        if state.active_idx >= state.pages.len() {
+            state.active_idx = state.pages.len() - 1;
+        }
+
+        Ok(())
     }
 
     /// Launch a non-headless browser for manual login (used by setup-login).
