@@ -33,9 +33,7 @@
 
 use crate::browser::BrowserManager;
 use crate::tools;
-use mcp_server_common::code_mode::{
-    ExecutionConfig, ExecutionError, HttpExecutor, PlanCompiler, PlanExecutor,
-};
+use pmcp_code_mode::{ExecutionConfig, ExecutionError, HttpExecutor, PlanCompiler, PlanExecutor};
 use serde_json::Value as JsonValue;
 use std::sync::Arc;
 

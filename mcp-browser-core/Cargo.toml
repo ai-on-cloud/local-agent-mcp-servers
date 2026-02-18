@@ -19,7 +19,7 @@ base64 = { workspace = true }
 chrono = { workspace = true }
 directories = { workspace = true }
 futures = { workspace = true }
-mcp-server-common = { workspace = true }
+pmcp-code-mode = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
