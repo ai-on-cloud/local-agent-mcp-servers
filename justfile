@@ -21,5 +21,9 @@ integration-test:
 setup-login profile url:
     cargo run -p browser-server -- setup-login --profile {{profile}} --url {{url}}
 
+run-config port="3200":
+    cargo run -p config-server -- serve --port {{port}}
+
 install:
     cargo install --path browser-server
+    cargo install --path config-server

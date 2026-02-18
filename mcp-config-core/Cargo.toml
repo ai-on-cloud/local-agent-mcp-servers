@@ -1,0 +1,20 @@
+[package]
+name = "mcp-config-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+zeroclaw = { path = "../../zeroclaw", default-features = false }
+pmcp = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }
+validator = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+toml = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+tempfile = "3"

@@ -1,0 +1,19 @@
+[package]
+name = "config-server"
+version.workspace = true
+edition.workspace = true
+license = "MIT"
+description = "MCP server for managing zeroclaw configuration"
+keywords = ["mcp", "config", "zeroclaw"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "config-server"
+path = "src/main.rs"
+
+[dependencies]
+mcp-config-core = { path = "../mcp-config-core" }
+server-common = { path = "../server-common" }
+tokio = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
