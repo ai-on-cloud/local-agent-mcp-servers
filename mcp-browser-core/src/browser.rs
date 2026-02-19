@@ -59,8 +59,12 @@ struct PageState {
 /// Supports multiple pages (tabs). Profile-aware: when a profile is
 /// specified, Chrome launches with `--user-data-dir` so cookies, localStorage,
 /// and saved passwords persist across sessions.
+///
+/// Automatically detects browser crashes by monitoring the CDP handler task
+/// and re-launches the browser on the next operation.
 pub struct BrowserManager {
     browser: RwLock<Option<Browser>>,
+    handler_handle: RwLock<Option<tokio::task::JoinHandle<()>>>,
     state: RwLock<PageState>,
     config: BrowserManagerConfig,
     profile_manager: Arc<ProfileManager>,
@@ -70,43 +74,85 @@ impl BrowserManager {
     pub fn new(config: BrowserManagerConfig, profile_manager: Arc<ProfileManager>) -> Self {
         Self {
             browser: RwLock::new(None),
+            handler_handle: RwLock::new(None),
             state: RwLock::new(PageState::default()),
             config,
             profile_manager,
         }
     }
 
+    /// Check if the CDP handler task has exited (meaning the browser is dead).
+    async fn is_browser_dead(&self) -> bool {
+        let handle_guard = self.handler_handle.read().await;
+        handle_guard.as_ref().is_some_and(|h| h.is_finished())
+    }
+
     /// Ensure a browser is running, launching one if needed.
+    /// Detects crashed browsers by checking if the CDP handler task has exited,
+    /// and automatically re-launches.
     pub async fn ensure_browser(&self) -> Result<()> {
-        // Fast path: browser already running
+        // Fast path: browser already running and handler is alive
         {
             let guard = self.browser.read().await;
-            if guard.is_some() {
+            if guard.is_some() && !self.is_browser_dead().await {
                 return Ok(());
+            }
+        }
+
+        // Clear stale page state before acquiring browser write lock.
+        // (Lock ordering: state before browser, matching page()'s slow path.)
+        {
+            let mut state = self.state.write().await;
+            if !state.pages.is_empty() {
+                tracing::info!("Clearing {} stale page references", state.pages.len());
+                state.pages.clear();
+                state.active_idx = 0;
             }
         }
 
         let mut browser_guard = self.browser.write().await;
         // Double-check after acquiring write lock
-        if browser_guard.is_some() {
+        if browser_guard.is_some() && !self.is_browser_dead().await {
             return Ok(());
         }
 
-        let browser = if let Some(ref cdp_url) = self.config.cdp_url {
+        if browser_guard.is_some() {
+            tracing::warn!("Browser CDP handler exited — re-launching browser");
+        }
+        *browser_guard = None;
+
+        let (browser, handle) = self.launch_browser().await?;
+
+        // Store handler handle for liveness checking
+        {
+            let mut handle_guard = self.handler_handle.write().await;
+            *handle_guard = Some(handle);
+        }
+
+        *browser_guard = Some(browser);
+        Ok(())
+    }
+
+    /// Launch (or connect to) a browser, returning the Browser and the handler task.
+    async fn launch_browser(&self) -> Result<(Browser, tokio::task::JoinHandle<()>)> {
+        if let Some(ref cdp_url) = self.config.cdp_url {
             let (browser, mut handler) =
                 Browser::connect(cdp_url)
                     .await
                     .with_context(|| format!("Failed to connect to browser at {}", cdp_url))?;
 
-            tokio::spawn(async move {
+            let url = cdp_url.clone();
+            let handle = tokio::spawn(async move {
                 while let Some(h) = handler.next().await {
-                    if h.is_err() {
+                    if let Err(ref e) = h {
+                        tracing::error!("CDP handler error (remote {url}): {e}");
                         break;
                     }
                 }
+                tracing::warn!("CDP handler exited (remote {url})");
             });
 
-            browser
+            Ok((browser, handle))
         } else {
             let mut builder = BrowserConfig::builder();
 
@@ -138,19 +184,18 @@ impl BrowserManager {
                 .await
                 .context("Failed to launch browser")?;
 
-            tokio::spawn(async move {
+            let handle = tokio::spawn(async move {
                 while let Some(h) = handler.next().await {
-                    if h.is_err() {
+                    if let Err(ref e) = h {
+                        tracing::error!("CDP handler error: {e}");
                         break;
                     }
                 }
+                tracing::warn!("CDP handler exited (local browser)");
             });
 
-            browser
-        };
-
-        *browser_guard = Some(browser);
-        Ok(())
+            Ok((browser, handle))
+        }
     }
 
     /// Get the active page, creating one if none exist.
