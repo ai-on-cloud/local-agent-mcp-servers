@@ -100,8 +100,16 @@ async fn run_serve(args: ServeArgs) -> anyhow::Result<()> {
         profile: args.profile,
     };
 
-    let server = mcp_browser_core::build_server(config)?;
-    server_common::run_http(server, &args.server).await
+    let (server, manager) = mcp_browser_core::build_server(config)?;
+
+    tokio::select! {
+        result = server_common::run_http(server, &args.server) => result,
+        _ = tokio::signal::ctrl_c() => {
+            tracing::info!("Ctrl+C received — shutting down browser");
+            manager.shutdown().await;
+            Ok(())
+        }
+    }
 }
 
 async fn run_setup_login(args: SetupLoginArgs) -> anyhow::Result<()> {

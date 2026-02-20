@@ -116,10 +116,12 @@ impl BrowserManager {
             return Ok(());
         }
 
-        if browser_guard.is_some() {
-            tracing::warn!("Browser CDP handler exited — re-launching browser");
+        if let Some(mut old_browser) = browser_guard.take() {
+            tracing::warn!("Browser CDP handler exited — closing stale browser before re-launch");
+            let _ = old_browser.close().await;
+            let _ = old_browser.wait().await;
+            let _ = old_browser.kill().await;
         }
-        *browser_guard = None;
 
         let (browser, handle) = self.launch_browser().await?;
 
@@ -316,6 +318,20 @@ impl BrowserManager {
         }
 
         Ok(())
+    }
+
+    /// Gracefully shut down the browser.
+    ///
+    /// Sends a CDP close, waits for the process to exit, then force-kills as
+    /// a fallback. Safe to call even if no browser is running.
+    pub async fn shutdown(&self) {
+        let mut guard = self.browser.write().await;
+        if let Some(mut browser) = guard.take() {
+            tracing::info!("Shutting down browser gracefully");
+            let _ = browser.close().await;
+            let _ = browser.wait().await;
+            let _ = browser.kill().await;
+        }
     }
 
     /// Launch a non-headless browser for manual login (used by setup-login).

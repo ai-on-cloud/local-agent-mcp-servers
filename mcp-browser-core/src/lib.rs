@@ -16,7 +16,10 @@ use profile::ProfileManager;
 use std::sync::Arc;
 
 /// Build a fully-configured MCP server with browser automation capabilities.
-pub fn build_server(config: BrowserManagerConfig) -> pmcp::Result<Server> {
+///
+/// Returns both the server and the `BrowserManager` handle so the caller can
+/// trigger a graceful browser shutdown (e.g. on Ctrl+C).
+pub fn build_server(config: BrowserManagerConfig) -> pmcp::Result<(Server, Arc<BrowserManager>)> {
     let profile_manager =
         Arc::new(ProfileManager::new().map_err(|e| pmcp::Error::internal(e.to_string()))?);
 
@@ -36,9 +39,9 @@ pub fn build_server(config: BrowserManagerConfig) -> pmcp::Result<Server> {
     let builder = tools::register_tools(builder, manager.clone());
 
     // Register resource-like tools (get_dom, get_url)
-    let builder = resources::register_resources(builder, manager);
+    let builder = resources::register_resources(builder, manager.clone());
 
-    builder.build()
+    Ok((builder.build()?, manager))
 }
 
 #[cfg(test)]
@@ -47,7 +50,8 @@ mod tests {
 
     #[test]
     fn test_build_server() {
-        let server = build_server(BrowserManagerConfig::default());
-        assert!(server.is_ok());
+        let result = build_server(BrowserManagerConfig::default());
+        assert!(result.is_ok());
+        let (_server, _manager) = result.unwrap();
     }
 }
