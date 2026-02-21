@@ -675,6 +675,7 @@ dependencies = [
  "anyhow",
  "clap",
  "mcp-browser-core",
+ "serde_json",
  "server-common",
  "tokio",
  "tracing",

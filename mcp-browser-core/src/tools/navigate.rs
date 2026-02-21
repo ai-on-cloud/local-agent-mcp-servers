@@ -37,7 +37,7 @@ pub async fn execute(
     let page = manager
         .page()
         .await
-        .map_err(|e| Error::internal(format!("Browser error: {}", e)))?;
+        .map_err(|e| Error::internal(format!("Browser error: {:#}", e)))?;
 
     page.goto(&input.url)
         .await

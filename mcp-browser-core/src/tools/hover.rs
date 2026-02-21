@@ -35,15 +35,12 @@ pub async fn execute(
         .await
         .map_err(|e| Error::internal(format!("Element not found '{}': {}", input.selector, e)))?;
 
-    element
-        .scroll_into_view()
-        .await
-        .map_err(|e| {
-            Error::internal(format!(
-                "Failed to scroll '{}' into view: {}",
-                input.selector, e
-            ))
-        })?;
+    element.scroll_into_view().await.map_err(|e| {
+        Error::internal(format!(
+            "Failed to scroll '{}' into view: {}",
+            input.selector, e
+        ))
+    })?;
 
     element
         .hover()

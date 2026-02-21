@@ -88,15 +88,17 @@ impl ProfileManager {
     /// Create a new ProfileManager, auto-detecting the OS-appropriate path.
     pub fn new() -> Result<Self> {
         let profiles_dir = resolve_profiles_dir()?;
-        std::fs::create_dir_all(&profiles_dir)
-            .with_context(|| format!("Failed to create profiles dir: {}", profiles_dir.display()))?;
+        std::fs::create_dir_all(&profiles_dir).with_context(|| {
+            format!("Failed to create profiles dir: {}", profiles_dir.display())
+        })?;
         Ok(Self { profiles_dir })
     }
 
     /// Create a ProfileManager with a specific directory (useful for testing).
     pub fn with_dir(profiles_dir: PathBuf) -> Result<Self> {
-        std::fs::create_dir_all(&profiles_dir)
-            .with_context(|| format!("Failed to create profiles dir: {}", profiles_dir.display()))?;
+        std::fs::create_dir_all(&profiles_dir).with_context(|| {
+            format!("Failed to create profiles dir: {}", profiles_dir.display())
+        })?;
         Ok(Self { profiles_dir })
     }
 
@@ -124,8 +126,12 @@ impl ProfileManager {
         }
 
         let profile_data_dir = self.profiles_dir.join(name);
-        std::fs::create_dir_all(&profile_data_dir)
-            .with_context(|| format!("Failed to create profile data dir: {}", profile_data_dir.display()))?;
+        std::fs::create_dir_all(&profile_data_dir).with_context(|| {
+            format!(
+                "Failed to create profile data dir: {}",
+                profile_data_dir.display()
+            )
+        })?;
 
         let now = Utc::now();
         let metadata = ProfileMetadata {
@@ -158,8 +164,12 @@ impl ProfileManager {
 
         // Remove the user-data-dir
         if profile.user_data_dir.exists() {
-            std::fs::remove_dir_all(&profile.user_data_dir)
-                .with_context(|| format!("Failed to remove profile data: {}", profile.user_data_dir.display()))?;
+            std::fs::remove_dir_all(&profile.user_data_dir).with_context(|| {
+                format!(
+                    "Failed to remove profile data: {}",
+                    profile.user_data_dir.display()
+                )
+            })?;
         }
 
         self.save_profiles_file(&file)?;
@@ -299,18 +309,16 @@ mod tests {
         manager
             .create_profile("dup", CreateOpts::default())
             .unwrap();
-        assert!(manager.create_profile("dup", CreateOpts::default()).is_err());
+        assert!(manager
+            .create_profile("dup", CreateOpts::default())
+            .is_err());
     }
 
     #[test]
     fn test_list_profiles() {
         let (manager, _tmp) = test_manager();
-        manager
-            .create_profile("a", CreateOpts::default())
-            .unwrap();
-        manager
-            .create_profile("b", CreateOpts::default())
-            .unwrap();
+        manager.create_profile("a", CreateOpts::default()).unwrap();
+        manager.create_profile("b", CreateOpts::default()).unwrap();
 
         let profiles = manager.list_profiles().unwrap();
         assert_eq!(profiles.len(), 2);

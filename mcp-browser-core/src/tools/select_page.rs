@@ -12,7 +12,9 @@ use validator::Validate;
 #[schemars(deny_unknown_fields)]
 pub struct SelectPageInput {
     /// Index of the page to switch to (from list_pages)
-    #[schemars(description = "Index of the page to switch to (use list_pages to see available indices)")]
+    #[schemars(
+        description = "Index of the page to switch to (use list_pages to see available indices)"
+    )]
     pub index: usize,
 }
 

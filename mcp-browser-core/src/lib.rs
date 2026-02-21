@@ -4,6 +4,7 @@
 //! with browser automation tools, ready to be served over HTTP.
 
 pub mod browser;
+pub mod check;
 pub mod code_mode;
 pub mod profile;
 pub mod resources;

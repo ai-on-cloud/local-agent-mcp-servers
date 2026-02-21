@@ -1,11 +1,13 @@
 //! Browser Automation MCP Server binary.
 //!
-//! Provides two subcommands:
+//! Provides three subcommands:
 //! - `serve` (default): Start the MCP server over Streamable HTTP
 //! - `setup-login`: Open browser for manual login, save profile for reuse
+//! - `check`: Run diagnostic checks on the browser automation stack
 
 use clap::{Parser, Subcommand};
 use mcp_browser_core::browser::{BrowserManager, BrowserManagerConfig};
+use mcp_browser_core::check;
 use mcp_browser_core::profile::{CreateOpts, ProfileManager};
 use std::sync::Arc;
 
@@ -23,6 +25,28 @@ enum Command {
 
     /// Open browser for manual login, save profile for reuse
     SetupLogin(SetupLoginArgs),
+
+    /// Run diagnostic checks on the browser automation stack
+    Check(CheckArgs),
+}
+
+#[derive(Parser)]
+struct CheckArgs {
+    /// Custom Chrome/Edge binary path to check
+    #[clap(long)]
+    browser_path: Option<String>,
+
+    /// Named profile to validate
+    #[clap(long)]
+    profile: Option<String>,
+
+    /// Output format: "text" or "json"
+    #[clap(long, default_value = "text")]
+    format: String,
+
+    /// Show extra details (platform, timestamp)
+    #[clap(long)]
+    verbose: bool,
 }
 
 #[derive(Parser)]
@@ -88,6 +112,7 @@ async fn main() -> anyhow::Result<()> {
             run_serve(args).await
         }
         Some(Command::SetupLogin(args)) => run_setup_login(args).await,
+        Some(Command::Check(args)) => run_check(args).await,
     }
 }
 
@@ -115,8 +140,7 @@ async fn run_serve(args: ServeArgs) -> anyhow::Result<()> {
 async fn run_setup_login(args: SetupLoginArgs) -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
@@ -179,10 +203,31 @@ async fn run_setup_login(args: SetupLoginArgs) -> anyhow::Result<()> {
 
     println!();
     println!("Profile '{}' saved.", args.profile);
-    println!(
-        "Use --profile {} to reuse this session.",
-        args.profile
-    );
+    println!("Use --profile {} to reuse this session.", args.profile);
 
     Ok(())
+}
+
+async fn run_check(args: CheckArgs) -> anyhow::Result<()> {
+    let report = check::run_check(check::CheckOptions {
+        browser_path: args.browser_path,
+        profile: args.profile,
+        verbose: args.verbose,
+    })
+    .await;
+
+    match args.format.as_str() {
+        "json" => {
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        _ => {
+            print!("{}", check::format_text(&report, args.verbose));
+        }
+    }
+
+    if report.overall {
+        Ok(())
+    } else {
+        std::process::exit(1);
+    }
 }

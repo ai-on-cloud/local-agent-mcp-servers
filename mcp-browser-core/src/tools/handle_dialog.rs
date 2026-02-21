@@ -21,7 +21,9 @@ pub struct HandleDialogInput {
     pub accept: bool,
 
     /// Text to enter in a prompt dialog (only used for prompt dialogs)
-    #[schemars(description = "Text to enter in a prompt() dialog (optional, only for prompt dialogs)")]
+    #[schemars(
+        description = "Text to enter in a prompt() dialog (optional, only for prompt dialogs)"
+    )]
     pub prompt_text: Option<String>,
 }
 
@@ -50,7 +52,11 @@ pub async fn execute(
         ))
     })?;
 
-    let action = if input.accept { "accepted" } else { "dismissed" };
+    let action = if input.accept {
+        "accepted"
+    } else {
+        "dismissed"
+    };
 
     Ok(json!({
         "status": action,

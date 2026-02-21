@@ -179,13 +179,10 @@ pub fn register_tools(
     let m = manager.clone();
     let builder = builder.tool(
         "get_text",
-        TypedTool::new(
-            "get_text",
-            move |input: get_text::GetTextInput, _extra| {
-                let m = m.clone();
-                Box::pin(async move { get_text::execute(&m, input).await })
-            },
-        )
+        TypedTool::new("get_text", move |input: get_text::GetTextInput, _extra| {
+            let m = m.clone();
+            Box::pin(async move { get_text::execute(&m, input).await })
+        })
         .with_description("Get the text content of an element identified by a CSS selector."),
     );
 
@@ -209,12 +206,16 @@ pub fn register_tools(
 }
 
 /// Input for validate_code tool.
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, validator::Validate)]
+#[derive(
+    Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, validator::Validate,
+)]
 #[schemars(deny_unknown_fields)]
 pub struct ValidateCodeInput {
     /// The browser automation script to validate (JavaScript subset)
     #[validate(length(min = 1))]
-    #[schemars(description = "The browser automation script to validate. Uses a safe JavaScript subset with api.post/get calls for browser operations.")]
+    #[schemars(
+        description = "The browser automation script to validate. Uses a safe JavaScript subset with api.post/get calls for browser operations."
+    )]
     pub code: String,
 
     /// If true, validate without generating an approval token
@@ -229,12 +230,16 @@ pub struct ValidateCodeInput {
 }
 
 /// Input for execute_code tool.
-#[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, validator::Validate)]
+#[derive(
+    Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema, validator::Validate,
+)]
 #[schemars(deny_unknown_fields)]
 pub struct ExecuteCodeInput {
     /// The browser automation script to execute (must match validated code)
     #[validate(length(min = 1))]
-    #[schemars(description = "The browser automation script to execute (must match validated code)")]
+    #[schemars(
+        description = "The browser automation script to execute (must match validated code)"
+    )]
     pub code: String,
 
     /// The approval token from validate_code

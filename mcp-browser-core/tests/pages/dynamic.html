@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>Dynamic Test Page</title></head>
+<body>
+  <h1>Dynamic Test</h1>
+  <div id="container"></div>
+  <script>
+    setTimeout(function() {
+      var el = document.createElement('div');
+      el.id = 'delayed-element';
+      el.textContent = 'I appeared after 500ms';
+      document.getElementById('container').appendChild(el);
+    }, 500);
+    setTimeout(function() {
+      var el = document.createElement('div');
+      el.id = 'very-delayed';
+      el.textContent = 'I appeared after 2s';
+      document.getElementById('container').appendChild(el);
+    }, 2000);
+  </script>
+</body>
+</html>

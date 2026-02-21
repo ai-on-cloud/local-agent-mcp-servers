@@ -96,8 +96,8 @@ impl BrowserHttpExecutor {
             }
 
             "/screenshot" => {
-                let input: tools::screenshot::ScreenshotInput =
-                    serde_json::from_value(body).map_err(|e| ExecutionError::RuntimeError {
+                let input: tools::screenshot::ScreenshotInput = serde_json::from_value(body)
+                    .map_err(|e| ExecutionError::RuntimeError {
                         message: format!("/screenshot: invalid input: {}", e),
                     })?;
                 tools::screenshot::execute(&self.manager, input)
@@ -205,8 +205,8 @@ impl BrowserHttpExecutor {
             }
 
             "/select_page" => {
-                let input: tools::select_page::SelectPageInput =
-                    serde_json::from_value(body).map_err(|e| ExecutionError::RuntimeError {
+                let input: tools::select_page::SelectPageInput = serde_json::from_value(body)
+                    .map_err(|e| ExecutionError::RuntimeError {
                         message: format!("/select_page: invalid input: {}", e),
                     })?;
                 tools::select_page::execute(&self.manager, input)
@@ -226,25 +226,30 @@ impl BrowserHttpExecutor {
     async fn handle_get(&self, path: &str) -> Result<JsonValue, ExecutionError> {
         match path {
             "/dom" => {
-                let page = self.manager.page().await.map_err(|e| {
-                    ExecutionError::RuntimeError {
+                let page = self
+                    .manager
+                    .page()
+                    .await
+                    .map_err(|e| ExecutionError::RuntimeError {
                         message: format!("/dom: browser error: {}", e),
-                    }
-                })?;
-                let html = page.content().await.map_err(|e| {
-                    ExecutionError::RuntimeError {
+                    })?;
+                let html = page
+                    .content()
+                    .await
+                    .map_err(|e| ExecutionError::RuntimeError {
                         message: format!("/dom: failed to get content: {}", e),
-                    }
-                })?;
+                    })?;
                 Ok(serde_json::json!({ "dom": html }))
             }
 
             "/url" => {
-                let page = self.manager.page().await.map_err(|e| {
-                    ExecutionError::RuntimeError {
+                let page = self
+                    .manager
+                    .page()
+                    .await
+                    .map_err(|e| ExecutionError::RuntimeError {
                         message: format!("/url: browser error: {}", e),
-                    }
-                })?;
+                    })?;
                 let url = page
                     .url()
                     .await

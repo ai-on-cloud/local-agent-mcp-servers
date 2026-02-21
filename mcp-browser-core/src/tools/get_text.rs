@@ -38,7 +38,12 @@ pub async fn execute(
     let text = element
         .inner_text()
         .await
-        .map_err(|e| Error::internal(format!("Failed to get text from '{}': {}", input.selector, e)))?
+        .map_err(|e| {
+            Error::internal(format!(
+                "Failed to get text from '{}': {}",
+                input.selector, e
+            ))
+        })?
         .unwrap_or_default();
 
     Ok(json!({

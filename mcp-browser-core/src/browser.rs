@@ -138,10 +138,9 @@ impl BrowserManager {
     /// Launch (or connect to) a browser, returning the Browser and the handler task.
     async fn launch_browser(&self) -> Result<(Browser, tokio::task::JoinHandle<()>)> {
         if let Some(ref cdp_url) = self.config.cdp_url {
-            let (browser, mut handler) =
-                Browser::connect(cdp_url)
-                    .await
-                    .with_context(|| format!("Failed to connect to browser at {}", cdp_url))?;
+            let (browser, mut handler) = Browser::connect(cdp_url)
+                .await
+                .with_context(|| format!("Failed to connect to browser at {}", cdp_url))?;
 
             let url = cdp_url.clone();
             let handle = tokio::spawn(async move {
@@ -179,6 +178,19 @@ impl BrowserManager {
             builder = builder
                 .arg("--disable-dev-shm-usage")
                 .arg("--remote-allow-origins=*");
+
+            // Remove stale SingletonLock left by crashed browsers. When no
+            // profile is set, chromiumoxide uses a shared temp dir that can
+            // accumulate lock files across ungraceful shutdowns.
+            if self.config.profile.is_none() {
+                let lock_path = std::env::temp_dir()
+                    .join("chromiumoxide-runner")
+                    .join("SingletonLock");
+                if lock_path.exists() {
+                    tracing::warn!("Removing stale SingletonLock at {:?}", lock_path);
+                    let _ = std::fs::remove_file(&lock_path);
+                }
+            }
 
             let config = builder.build().map_err(|e| anyhow::anyhow!("{}", e))?;
 
@@ -221,9 +233,7 @@ impl BrowserManager {
         }
 
         let browser_guard = self.browser.read().await;
-        let browser = browser_guard
-            .as_ref()
-            .context("Browser not initialized")?;
+        let browser = browser_guard.as_ref().context("Browser not initialized")?;
 
         let page = browser
             .new_page("about:blank")
@@ -240,9 +250,7 @@ impl BrowserManager {
         self.ensure_browser().await?;
 
         let browser_guard = self.browser.read().await;
-        let browser = browser_guard
-            .as_ref()
-            .context("Browser not initialized")?;
+        let browser = browser_guard.as_ref().context("Browser not initialized")?;
 
         let page = browser
             .new_page(url)

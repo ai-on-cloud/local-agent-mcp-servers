@@ -1,9 +1,7 @@
 //! Press a keyboard key, optionally with modifiers.
 
 use crate::browser::BrowserManager;
-use chromiumoxide::cdp::browser_protocol::input::{
-    DispatchKeyEventParams, DispatchKeyEventType,
-};
+use chromiumoxide::cdp::browser_protocol::input::{DispatchKeyEventParams, DispatchKeyEventType};
 use pmcp::Error;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -22,7 +20,9 @@ pub struct PressKeyInput {
     pub key: String,
 
     /// CSS selector of element to focus before pressing key (optional)
-    #[schemars(description = "CSS selector of element to focus before pressing the key (optional)")]
+    #[schemars(
+        description = "CSS selector of element to focus before pressing the key (optional)"
+    )]
     pub selector: Option<String>,
 }
 

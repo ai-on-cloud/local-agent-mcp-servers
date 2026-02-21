@@ -17,6 +17,15 @@ run port="3100" profile="":
 integration-test:
     cargo test -p mcp-browser-core --test code_mode_browser -- --ignored --test-threads=1
 
+integration-test-chrome:
+    BROWSER=chrome cargo test -p mcp-browser-core --test code_mode_browser -- --ignored --test-threads=1
+
+integration-test-edge:
+    BROWSER=edge cargo test -p mcp-browser-core --test code_mode_browser -- --ignored --test-threads=1
+
+browser-check *args:
+    cargo run -p browser-server --release -- check {{args}}
+
 # Open browser for manual login, then save profile
 setup-login profile url:
     cargo run -p browser-server -- setup-login --profile {{profile}} --url {{url}}
