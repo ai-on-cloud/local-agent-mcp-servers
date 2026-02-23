@@ -23,6 +23,12 @@ integration-test-chrome:
 integration-test-edge:
     BROWSER=edge cargo test -p mcp-browser-core --test code_mode_browser -- --ignored --test-threads=1
 
+amplify-test:
+    BROWSER=chrome cargo test -p mcp-browser-core --test code_mode_amplify -- --ignored --test-threads=1
+
+amplify-test-edge:
+    BROWSER=edge cargo test -p mcp-browser-core --test code_mode_amplify -- --ignored --test-threads=1
+
 browser-check *args:
     cargo run -p browser-server --release -- check {{args}}
 
