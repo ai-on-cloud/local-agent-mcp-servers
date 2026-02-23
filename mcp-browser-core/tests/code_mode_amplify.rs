@@ -5,18 +5,21 @@
 //! and multi-step workflows.
 //!
 //! All tests are `#[ignore]` — run explicitly with:
-//!   AMPLIFY_URL=https://<your-site> cargo test -p mcp-browser-core --test code_mode_amplify -- --ignored --test-threads=1
+//!   cargo test -p mcp-browser-core --test code_mode_amplify -- --ignored --test-threads=1
 //!
+//! Override the default URL with AMPLIFY_URL env var.
 //! Cross-browser: set BROWSER env var (chrome, edge, or absolute path).
 
 mod test_helpers;
 
 use test_helpers::{preflight_check, run_script, test_manager};
 
-/// Read the Amplify site base URL from the environment.
-/// Falls back to localhost:5173 for local dev server testing.
+/// Default deployed Amplify site URL.
+const DEFAULT_AMPLIFY_URL: &str = "https://staging.d2e7krbov63efe.amplifyapp.com";
+
+/// Read the Amplify site base URL from the environment, or use the deployed default.
 fn amplify_url() -> String {
-    std::env::var("AMPLIFY_URL").unwrap_or_else(|_| "http://localhost:5173".to_string())
+    std::env::var("AMPLIFY_URL").unwrap_or_else(|_| DEFAULT_AMPLIFY_URL.to_string())
 }
 
 // ---------------------------------------------------------------------------
